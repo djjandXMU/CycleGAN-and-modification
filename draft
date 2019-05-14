@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 24 21:22:00 2018
+
+@author: usrp1
+"""
+
+from datetime import datetime
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+from numba import jit
+
+@jit
+def color_similar(img1,img2):
+    img1_r=tf.floor(tf.multiply(tf.add(img1[0,:,:,0],1),255))
+    img1_g=tf.floor(tf.multiply(tf.add(img1[0,:,:,1],1),255))
+    img1_b=tf.floor(tf.multiply(tf.add(img1[0,:,:,2],1),255))
+    
+    img2_r=tf.floor(tf.multiply(tf.add(img2[0,:,:,0],1),255))
+    img2_g=tf.floor(tf.multiply(tf.add(img2[0,:,:,1],1),255))
+    img2_b=tf.floor(tf.multiply(tf.add(img2[0,:,:,2],1),255))
+
+    hist_1_r = tf.histogram_fixed_width(values=img1_r,nbins=256,value_range=[0.0,255.0],name='hist_1_r',dtype=tf.float32)
+    hist_1_g = tf.histogram_fixed_width(values=img1_g,nbins=256,value_range=[0.0,255.0],name='hist_1_g',dtype=tf.float32)
+    hist_1_b = tf.histogram_fixed_width(values=img1_b,nbins=256,value_range=[0.0,255.0],name='hist_1_b',dtype=tf.float32)
+    
+    hist_2_r = tf.histogram_fixed_width(values=img2_r,nbins=256,value_range=[0.0,255.0],name='hist_2_r',dtype=tf.float32)
+    hist_2_g = tf.histogram_fixed_width(values=img2_g,nbins=256,value_range=[0.0,255.0],name='hist_2_g',dtype=tf.float32)
+    hist_2_b = tf.histogram_fixed_width(values=img2_b,nbins=256,value_range=[0.0,255.0],name='hist_2_b',dtype=tf.float32)
+
+#    print(hist_1)
+    hist_1_r_norm = tf.multiply(hist_1_r,1.0/65536,name='hist_1_r_norm')
+    hist_1_g_norm = tf.multiply(hist_1_g,1.0/65536,name='hist_1_g_norm')
+    hist_1_b_norm = tf.multiply(hist_1_b,1.0/65536,name='hist_1_b_norm')
+    
+    hist_2_r_norm = tf.multiply(hist_2_r,1.0/65536,name='hist_2_r_norm')
+    hist_2_g_norm = tf.multiply(hist_2_g,1.0/65536,name='hist_2_g_norm')
+    hist_2_b_norm = tf.multiply(hist_2_b,1.0/65536,name='hist_2_b_norm')
+    
+
+
+    index_r = tf.reduce_sum(tf.minimum(hist_1_r_norm,hist_2_r_norm))
+    index_g = tf.reduce_sum(tf.minimum(hist_1_g_norm,hist_2_g_norm))
+    index_b = tf.reduce_sum(tf.minimum(hist_1_b_norm,hist_2_b_norm))
+    index = (index_r+index_g+index_b)/3.0
+    
+#x=0:0.01:10;
+#    index_weighted =10./(1+tf.exp(-(index-5)));
+    index_weighted=tf.div(10.0,tf.add(tf.exp(tf.add(tf.multiply(index,-10.0),5.0)),1.0))
+#plot(x,y)
+#    k=1
+#    for i in range(256):
+#        for j in range(256):
+#            tf.add(hist_1[0,img1[i,j]],1)
+#            tf.add(hist_2[0,img2[i,j]],1)
+#            print(k)
+#            k=k+1
+#
+    return index_weighted
+
+
+x_img = tf.placeholder(tf.float32,shape=[1, 256, 256,3],name='x_img') #输入的x域图像
+y_img = tf.placeholder(tf.float32,shape=[1, 256, 256,3],name='y_img') #输入的y域图像
+djj = color_similar(x_img,y_img)
